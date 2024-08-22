@@ -1,0 +1,38 @@
+name: Setup Call of Duty 2 Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Install and Run Call of Duty 2 Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Update and Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl wget tar bzip2 gzip tmux lib32gcc1 libstdc++6:i386 lib32z1 lib32ncurses6 lib32bz2-1.0
+
+      - name: Create cod2server User
+        run: |
+          sudo adduser --disabled-password --gecos "" cod2server
+          echo "cod2server ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/cod2server
+
+      - name: Switch to cod2server User and Download LinuxGSM
+        run: |
+          sudo su - cod2server -c "curl -Lo linuxgsm.sh https://linuxgsm.sh && chmod +x linuxgsm.sh"
+          sudo su - cod2server -c "./linuxgsm.sh cod2server"
+
+      - name: Install Call of Duty 2 Server
+        run: |
+          sudo su - cod2server -c "./cod2server auto-install"
+
+      - name: Start Call of Duty 2 Server
+        run: |
+          sudo su - cod2server -c "./cod2server start"
+
+      - name: Monitor Call of Duty 2 Server
+        run: |
+          sudo su - cod2server -c "./cod2server monitor"
