@@ -12,8 +12,10 @@ jobs:
     steps:
       - name: Update and Install Dependencies
         run: |
+          sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y curl wget tar bzip2 gzip tmux lib32gcc1 libstdc++6:i386 lib32z1 lib32ncurses6 lib32bz2-1.0
+          sudo apt-get install -y curl wget tar bzip2 gzip tmux lib32gcc-s1 libstdc++6 libstdc++6:i386 lib32z1 lib32ncurses6
+
 
       - name: Create cod2server User
         run: |
