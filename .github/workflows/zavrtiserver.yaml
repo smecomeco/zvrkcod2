@@ -66,7 +66,20 @@ jobs:
         run: |
           mkdir -p ~/.ngrok2
           echo ${{ secrets.NGROK_AUTH_TOKEN }} > ~/.ngrok2/ngrok.yml
-
+      
+      - name: Debug NGROK_AUTH_TOKEN (safely)
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        run: |
+          echo "Auth token length: ${#NGROK_AUTH_TOKEN}"
+          echo "First 4 characters of auth token: ${NGROK_AUTH_TOKEN:0:4}"
+          echo "Last 4 characters of auth token: ${NGROK_AUTH_TOKEN: -4}"
+          if [[ $NGROK_AUTH_TOKEN == *"authtoken:"* ]]; then
+            echo "Warning: Auth token contains 'authtoken:' prefix"
+          else
+            echo "Auth token format appears correct (no 'authtoken:' prefix)"
+          fi
+      
       - name: Authenticate ngrok
         run: |
           ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
