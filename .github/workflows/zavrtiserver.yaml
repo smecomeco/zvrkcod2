@@ -27,10 +27,22 @@ jobs:
         run: |
           sudo su - cod2server -c "./cod2server auto-install"
 
+      - name: Locate server configuration file
+        run: |
+          sudo su - cod2server -c "find ~ -name server.cfg"
+
       - name: Configure Call of Duty 2 Server
         run: |
-          sudo su - cod2server -c "sed -i 's/^set net_port.*/set net_port \"28960\"/' ~/serverfiles/main/server.cfg"
-          sudo su - cod2server -c "echo 'set sv_punkbuster 0' >> ~/serverfiles/main/server.cfg"
+          SERVER_CFG=$(sudo su - cod2server -c "find ~ -name server.cfg")
+          if [ -z "$SERVER_CFG" ]; then
+            echo "Error: server.cfg not found"
+            exit 1
+          fi
+          echo "Found server.cfg at: $SERVER_CFG"
+          sudo su - cod2server -c "sed -i 's/^set net_port.*/set net_port \"28960\"/' $SERVER_CFG"
+          sudo su - cod2server -c "grep -q '^set sv_punkbuster' $SERVER_CFG && sed -i 's/^set sv_punkbuster.*/set sv_punkbuster 0/' $SERVER_CFG || echo 'set sv_punkbuster 0' >> $SERVER_CFG"
+          echo "Updated server configuration:"
+          sudo su - cod2server -c "cat $SERVER_CFG"
 
       - name: Start Call of Duty 2 Server
         run: |
