@@ -6,9 +6,6 @@ jobs:
     name: Install and Run Call of Duty 2 Server
     runs-on: ubuntu-20.04
     timeout-minutes: 9999
-    environment: # Add this environment section here
-      PARAMS: "+set fs_homepath /cod2/.callofduty2/ +set fs_game myserver +set dedicated 2 +set net_port 28960 +exec server.cfg"
-      CHECK_PORT: 28960
     steps:
       - name: Update and Install Dependencies
         run: |
@@ -38,14 +35,30 @@ jobs:
             exit 1
           fi
           echo "Found server.cfg at: $SERVER_CFG"
-          sudo su - cod2server -c "sed -i 's/^set net_port.*/set net_port \"28960\"/' $SERVER_CFG"
-          sudo su - cod2server -c "grep -q '^set sv_punkbuster' $SERVER_CFG && sed -i 's/^set sv_punkbuster.*/set sv_punkbuster 0/' $SERVER_CFG || echo 'set sv_punkbuster 0' >> $SERVER_CFG"
+          
+          sudo su - cod2server << EOF
+          cat << EOT > $SERVER_CFG
+          set sv_hostname "My CoD2 Server"
+          set rcon_password "your_rcon_password"
+          set sv_maxclients 32
+          set g_gametype "dm"
+          set sv_mapRotation "map mp_toujane map mp_burgundy map mp_dawnville map mp_decoy map mp_matmata"
+          set sv_maprotationcurrent ""
+          set g_deadchat 1
+          set scr_game_allowkillcam 1
+          set scr_team_fftype 1
+          set scr_game_spectatetype 1
+          set net_port "28960"
+          set sv_punkbuster 0
+          EOT
+          EOF
+          
           echo "Updated server configuration:"
           sudo su - cod2server -c "cat $SERVER_CFG"
-
+          
       - name: Start Call of Duty 2 Server
         run: |
-          sudo su - cod2server -c "./cod2server start ${PARAMS}"
+          sudo su - cod2server -c "./cod2server start"
           sleep 10  # Give the server time to start
 
       - name: Monitor Call of Duty 2 Server
