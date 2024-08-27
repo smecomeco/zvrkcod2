@@ -62,11 +62,6 @@ jobs:
         run: |
           curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list && sudo apt update && sudo apt install ngrok
 
-      - name: Write ngrok auth token file
-        run: |
-          mkdir -p ~/.ngrok2
-          echo ${{ secrets.NGROK_AUTH_TOKEN }} > ~/.ngrok2/ngrok.yml
-      
       - name: Debug NGROK_AUTH_TOKEN (safely)
         env:
           NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
@@ -79,10 +74,19 @@ jobs:
           else
             echo "Auth token format appears correct (no 'authtoken:' prefix)"
           fi
-      
-      - name: Authenticate ngrok
+
+      - name: Set up ngrok configuration
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
         run: |
-          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+          mkdir -p ~/.ngrok2
+          echo "authtoken: $NGROK_AUTH_TOKEN" > ~/.ngrok2/ngrok.yml
+          chmod 600 ~/.ngrok2/ngrok.yml
+          echo "Configuration file contents (first line only):"
+          head -n 1 ~/.ngrok2/ngrok.yml | sed 's/authtoken: .*/authtoken: <hidden>/'
+
+      - name: Verify ngrok configuration
+        run: ngrok config verify
 
       - name: Start ngrok
         run: |
