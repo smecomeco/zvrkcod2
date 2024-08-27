@@ -29,17 +29,11 @@ jobs:
 
       - name: Configure Call of Duty 2 Server
         run: |
-          SERVER_CFG=$(sudo su - cod2server -c "find ~ -name server.cfg")
-          if [ -z "$SERVER_CFG" ]; then
-            echo "Error: server.cfg not found"
-            exit 1
-          fi
-          echo "Found server.cfg at: $SERVER_CFG"
-          
+          SERVER_CFG="/home/cod2server/serverfiles/myserver/server.cfg"
           sudo su - cod2server << EOF
           cat << EOT > $SERVER_CFG
           set sv_hostname "My CoD2 Server"
-          set rcon_password "your_rcon_password"
+          set rcon_password "your_secure_rcon_password"
           set sv_maxclients 32
           set g_gametype "dm"
           set sv_mapRotation "map mp_toujane map mp_burgundy map mp_dawnville map mp_decoy map mp_matmata"
@@ -50,12 +44,21 @@ jobs:
           set scr_game_spectatetype 1
           set net_port "28960"
           set sv_punkbuster 0
+          set dedicated 2
           EOT
           EOF
           
           echo "Updated server configuration:"
           sudo su - cod2server -c "cat $SERVER_CFG"
-          
+
+      - name: Update LinuxGSM server config
+        run: |
+          sudo su - cod2server << EOF
+          sed -i 's/^servercfgfullpath=.*/servercfgfullpath="\/home\/cod2server\/serverfiles\/myserver\/server.cfg"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
+          sed -i 's/^serverfiles=.*/serverfiles="\/home\/cod2server\/serverfiles"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
+          sed -i 's/^parms=.*/parms="+set fs_homepath \/home\/cod2server\/.callofduty2\/ +set fs_game myserver +set dedicated 2 +set net_port 28960 +exec server.cfg"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
+          EOF
+
       - name: Start Call of Duty 2 Server
         run: |
           sudo su - cod2server -c "./cod2server start"
