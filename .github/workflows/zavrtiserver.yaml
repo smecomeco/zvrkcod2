@@ -6,6 +6,9 @@ jobs:
     name: Install and Run Call of Duty 2 Server
     runs-on: ubuntu-20.04
     timeout-minutes: 9999
+    environment: # Add this environment section here
+      PARAMS: "+set fs_homepath /cod2/.callofduty2/ +set fs_game myserver +set dedicated 2 +set net_port 28960 +exec server.cfg"
+      CHECK_PORT: 28960
     steps:
       - name: Update and Install Dependencies
         run: |
@@ -27,10 +30,6 @@ jobs:
         run: |
           sudo su - cod2server -c "./cod2server auto-install"
 
-      - name: Locate server configuration file
-        run: |
-          sudo su - cod2server -c "find ~ -name server.cfg"
-
       - name: Configure Call of Duty 2 Server
         run: |
           SERVER_CFG=$(sudo su - cod2server -c "find ~ -name server.cfg")
@@ -46,7 +45,7 @@ jobs:
 
       - name: Start Call of Duty 2 Server
         run: |
-          sudo su - cod2server -c "./cod2server start"
+          sudo su - cod2server -c "./cod2server start ${PARAMS}"
           sleep 10  # Give the server time to start
 
       - name: Monitor Call of Duty 2 Server
