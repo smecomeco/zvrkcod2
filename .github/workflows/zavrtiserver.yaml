@@ -26,6 +26,9 @@ jobs:
       - name: Install Call of Duty 2 Server
         run: |
           sudo su - cod2server -c "./cod2server auto-install"
+          
+      - name: Create directory
+        run: sudo su - cod2server -c "mkdir -p /home/cod2server/serverfiles/myserver"
 
       - name: Configure Call of Duty 2 Server
         run: |
