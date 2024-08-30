@@ -159,16 +159,16 @@ jobs:
 
       - name: Verify Server Accessibility
         run: |
-          TUNNELS=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[].public_url')
-          for NGROK_URL in $TUNNELS; do
-            echo "Checking accessibility of $NGROK_URL"
-            if curl -s --head $NGROK_URL | grep "200 OK" > /dev/null; then
-              echo "Server is accessible at $NGROK_URL"
-            else
-              echo "Server is not accessible at $NGROK_URL"
-              exit 1
-            fi
-          done
+          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' | sed 's|tcp://||')
+          PORT=$(echo $NGROK_URL | cut -d':' -f2 | cut -d'/' -f1)
+      
+          # Check if the server is accessible using nc
+          if nc -z localhost $PORT; then
+            echo "Server is accessible at $NGROK_URL"
+          else
+            echo "Server is not accessible at $NGROK_URL"
+            exit 1
+          fi
         
       - name: Keep alive
         run: |
