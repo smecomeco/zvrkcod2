@@ -124,15 +124,7 @@ jobs:
 
       - name: Verify ngrok configuration
         run: ngrok config check
-
-      - name: Start ngrok for VNC
-        run: |
-          ngrok http 8080 --log=stdout > ngrok_vnc.log &
-          sleep 5
-          echo "Access the Ubuntu desktop via this URL:"
-          curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
-          cat ngrok_vnc.log
-
+     
       - name: Start ngrok for CoD2 Server
         run: |
           ngrok tcp 28960 --log=stdout > ngrok_cod2.log &
@@ -160,10 +152,10 @@ jobs:
       - name: Verify Server Accessibility
         run: |
           NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' | sed 's|tcp://||')
-          PORT=$(echo $NGROK_URL | cut -d':' -f2 | cut -d'/' -f1)
-      
-          # Check if the server is accessible using nc
-          if nc -z localhost $PORT; then
+          IFS=':' read -ra ADDR <<< "$NGROK_URL"
+          HOST=${ADDR[0]}
+          PORT=${ADDR[1]}
+          if nc -z -w5 $HOST $PORT; then
             echo "Server is accessible at $NGROK_URL"
           else
             echo "Server is not accessible at $NGROK_URL"
