@@ -127,7 +127,7 @@ jobs:
      
       - name: Start ngrok for CoD2 Server
         run: |
-          ngrok tcp 28960 --log=stdout > ngrok_cod2.log &
+          ngrok udp 28960 --log=stdout > ngrok_cod2.log &
           sleep 5
           echo "Connect to the CoD2 server using this address:"
           NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[1].public_url')
