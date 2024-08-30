@@ -27,15 +27,17 @@ jobs:
         run: |
           sudo su - cod2server -c "./cod2server auto-install"
 
-      - name: Create directory
-        run: sudo su - cod2server -c "mkdir -p /home/cod2server/serverfiles/myserver"
+      - name: Create Necessary Directories
+        run: |
+          sudo su - cod2server -c "mkdir -p /home/cod2server/log/server"
+          sudo su - cod2server -c "mkdir -p /home/cod2server/lgsm/config-lgsm/cod2server"
 
-      - name: Configure Call of Duty 2 Server
+      - name: Update Server Configuration
         run: |
           sudo su - cod2server << EOF
           cat << EOT > /home/cod2server/serverfiles/main/server.cfg
-          set sv_hostname "My CoD2 Server"
-          set rcon_password "YourSecurePassword"
+          set sv_hostname "@SERVER@"
+          set rcon_password "lozinka"
           set sv_maxclients 20
           set g_gametype "dm"
           set sv_mapRotation "map mp_toujane map mp_burgundy map mp_dawnville map mp_decoy map mp_matmata"
@@ -48,50 +50,21 @@ jobs:
           set dedicated 2
           EOT
           EOF
-          
-          echo "Updated server configuration:"
-          sudo su - cod2server -c "cat $SERVER_CFG"
 
-      - name: Update LinuxGSM server config
+      - name: Update LinuxGSM Configuration
         run: |
           sudo su - cod2server << EOF
-          sed -i 's/^servercfgfullpath=.*/servercfgfullpath="\/home\/cod2server\/serverfiles\/myserver\/server.cfg"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
-          sed -i 's/^serverfiles=.*/serverfiles="\/home\/cod2server\/serverfiles"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
-          sed -i 's/^parms=.*/parms="+set fs_homepath \/home\/cod2server\/.callofduty2\/ +set fs_game myserver +set dedicated 2 +set net_port 28960 +exec server.cfg"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
+          cat << EOT > /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
+          port="28960"
+          clientport="28960"
+          serverfiles="/home/cod2server/serverfiles"
+          parms="+set dedicated 2 +set net_port 28960 +set sv_maxclients 20 +exec server.cfg"
+          EOT
           EOF
-
-      - name: Check and Configure Firewall
-        run: |
-          sudo ufw status
-          sudo ufw allow 28960/udp
-          sudo ufw reload
-
-      - name: Create Log Directory
-        run: |
-          sudo su - cod2server -c "mkdir -p /home/cod2server/log/server"
 
       - name: Start Call of Duty 2 Server
         run: |
-          sudo su - cod2server -c "./cod2server start +exec server.cfg"
-          sleep 10  # Give the server time to start
-
-      - name: Debug Server Status
-        run: |
-          echo "Checking server status:"
-          sudo su - cod2server -c "./cod2server details"
-          echo "Checking server logs:"
-          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/server/cod2server-console.log"
-          echo "Checking network status:"
-          sudo netstat -tuln | grep 28960
-          echo "Checking firewall status:"
-          sudo ufw status
-          echo "Checking server process:"
-          ps aux | grep cod2
-          echo "Checking server process and ports:"
-          ps aux | grep cod2
-          sudo lsof -i :28960
-          echo "Checking server log (if it exists now):"
-          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/server/cod2server-console.log || echo 'Log file still not found'"
+          sudo su - cod2server -c "./cod2server start"
 
       - name: Monitor Call of Duty 2 Server
         run: |
@@ -119,6 +92,7 @@ jobs:
       - name: Start noVNC
         run: |
           /usr/share/novnc/utils/launch.sh --vnc localhost:5901 --listen 8080 &
+
 
       - name: Install ngrok
         run: |
@@ -151,15 +125,35 @@ jobs:
       - name: Verify ngrok configuration
         run: ngrok config check
 
-      - name: Start ngrok
+      - name: Start ngrok for VNC
         run: |
-          ngrok tcp 28960 --config ~/.ngrok2/ngrok.yml --log=stdout > ngrok.log &
+          ngrok http 8080 --log=stdout > ngrok_vnc.log &
           sleep 5
-          echo "Server address for clients:"
-          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' | sed 's|tcp://||')
+          echo "Access the Ubuntu desktop via this URL:"
+          curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+          cat ngrok_vnc.log
+
+      - name: Start ngrok for CoD2 Server
+        run: |
+          ngrok tcp 28960 --log=stdout > ngrok_cod2.log &
+          sleep 5
+          echo "Connect to the CoD2 server using this address:"
+          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[1].public_url')
           echo $NGROK_URL
-          echo "Call of Duty 2 players should use this address to connect."
-          cat ngrok.log
+          cat ngrok_cod2.log
+
+      - name: Debug Server Status
+        run: |
+          echo "Checking server status:"
+          sudo su - cod2server -c "./cod2server details"
+          echo "Checking server logs:"
+          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/server/cod2server-console.log || echo 'Log file not found'"
+          echo "Checking network status:"
+          sudo netstat -tuln | grep 28960
+          echo "Checking server process:"
+          ps aux | grep cod2
+          echo "ngrok tunnel info:"
+          curl -s http://localhost:4040/api/tunnels | jq .
 
       - name: Verify server accessibility
         run: |
