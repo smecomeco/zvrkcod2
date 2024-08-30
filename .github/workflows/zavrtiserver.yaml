@@ -64,7 +64,7 @@ jobs:
 
       - name: Start Call of Duty 2 Server
         run: |
-          sudo su - cod2server -c "./cod2server start"
+          sudo su - cod2server -c "mkdir -p ~/log && mkdir -p ~/log/script && mkdir -p ~/log/console && ln -s ~/serverfiles/Logs ~/log/server && ./cod2server start"
 
       - name: Monitor Call of Duty 2 Server
         run: |
