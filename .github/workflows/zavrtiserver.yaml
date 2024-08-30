@@ -32,12 +32,11 @@ jobs:
 
       - name: Configure Call of Duty 2 Server
         run: |
-          SERVER_CFG="/home/cod2server/serverfiles/myserver/server.cfg"
           sudo su - cod2server << EOF
-          cat << EOT > $SERVER_CFG
+          cat << EOT > /home/cod2server/serverfiles/main/server.cfg
           set sv_hostname "My CoD2 Server"
-          set rcon_password "your_secure_rcon_password"
-          set sv_maxclients 32
+          set rcon_password "YourSecurePassword"
+          set sv_maxclients 20
           set g_gametype "dm"
           set sv_mapRotation "map mp_toujane map mp_burgundy map mp_dawnville map mp_decoy map mp_matmata"
           set sv_maprotationcurrent ""
@@ -45,8 +44,7 @@ jobs:
           set scr_game_allowkillcam 1
           set scr_team_fftype 1
           set scr_game_spectatetype 1
-          set net_port "28960"
-          set sv_punkbuster 0
+          set net_port 28960
           set dedicated 2
           EOT
           EOF
@@ -62,14 +60,19 @@ jobs:
           sed -i 's/^parms=.*/parms="+set fs_homepath \/home\/cod2server\/.callofduty2\/ +set fs_game myserver +set dedicated 2 +set net_port 28960 +exec server.cfg"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
           EOF
 
-      - name: Configure Firewall
+      - name: Check and Configure Firewall
         run: |
+          sudo ufw status
           sudo ufw allow 28960/udp
           sudo ufw reload
 
+      - name: Create Log Directory
+        run: |
+          sudo su - cod2server -c "mkdir -p /home/cod2server/log/server"
+
       - name: Start Call of Duty 2 Server
         run: |
-          sudo su - cod2server -c "./cod2server start"
+          sudo su - cod2server -c "./cod2server start +exec server.cfg"
           sleep 10  # Give the server time to start
 
       - name: Debug Server Status
@@ -84,6 +87,11 @@ jobs:
           sudo ufw status
           echo "Checking server process:"
           ps aux | grep cod2
+          echo "Checking server process and ports:"
+          ps aux | grep cod2
+          sudo lsof -i :28960
+          echo "Checking server log (if it exists now):"
+          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/server/cod2server-console.log || echo 'Log file still not found'"
 
       - name: Monitor Call of Duty 2 Server
         run: |
