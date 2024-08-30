@@ -26,7 +26,7 @@ jobs:
       - name: Install Call of Duty 2 Server
         run: |
           sudo su - cod2server -c "./cod2server auto-install"
-          
+
       - name: Create directory
         run: sudo su - cod2server -c "mkdir -p /home/cod2server/serverfiles/myserver"
 
@@ -62,10 +62,28 @@ jobs:
           sed -i 's/^parms=.*/parms="+set fs_homepath \/home\/cod2server\/.callofduty2\/ +set fs_game myserver +set dedicated 2 +set net_port 28960 +exec server.cfg"/' /home/cod2server/lgsm/config-lgsm/cod2server/cod2server.cfg
           EOF
 
+      - name: Configure Firewall
+        run: |
+          sudo ufw allow 28960/udp
+          sudo ufw reload
+
       - name: Start Call of Duty 2 Server
         run: |
           sudo su - cod2server -c "./cod2server start"
           sleep 10  # Give the server time to start
+
+      - name: Debug Server Status
+        run: |
+          echo "Checking server status:"
+          sudo su - cod2server -c "./cod2server details"
+          echo "Checking server logs:"
+          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/server/cod2server-console.log"
+          echo "Checking network status:"
+          sudo netstat -tuln | grep 28960
+          echo "Checking firewall status:"
+          sudo ufw status
+          echo "Checking server process:"
+          ps aux | grep cod2
 
       - name: Monitor Call of Duty 2 Server
         run: |
