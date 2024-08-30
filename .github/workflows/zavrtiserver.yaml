@@ -147,27 +147,29 @@ jobs:
           echo "Checking server status:"
           sudo su - cod2server -c "./cod2server details"
           echo "Checking server logs:"
-          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/server/cod2server-console.log || echo 'Log file not found'"
+          sudo su - cod2server -c "tail -n 50 /home/cod2server/log/console/cod2server-console.log || echo 'Log file not found'"
           echo "Checking network status:"
           sudo netstat -tuln | grep 28960
           echo "Checking server process:"
           ps aux | grep cod2
           echo "ngrok tunnel info:"
-          curl -s http://localhost:4040/api/tunnels | jq .
+          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "Server is accessible at $NGROK_URL"
+          curl -I $NGROK_URL || echo "Server is not accessible at $NGROK_URL"
 
-      - name: Verify server accessibility
+      - name: Verify Server Accessibility
         run: |
-          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' | sed 's|tcp://||')
-          IFS=':' read -ra ADDR <<< "$NGROK_URL"
-          HOST=${ADDR[0]}
-          PORT=${ADDR[1]}
-          if nc -z -w5 $HOST $PORT; then
-            echo "Server is accessible at $NGROK_URL"
-          else
-            echo "Server is not accessible at $NGROK_URL"
-            exit 1
-          fi
-          
+          TUNNELS=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[].public_url')
+          for NGROK_URL in $TUNNELS; do
+            echo "Checking accessibility of $NGROK_URL"
+            if curl -s --head $NGROK_URL | grep "200 OK" > /dev/null; then
+              echo "Server is accessible at $NGROK_URL"
+            else
+              echo "Server is not accessible at $NGROK_URL"
+              exit 1
+            fi
+          done
+        
       - name: Keep alive
         run: |
           while true; do
